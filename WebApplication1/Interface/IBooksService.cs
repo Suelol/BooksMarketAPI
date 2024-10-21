@@ -16,5 +16,7 @@ namespace WebApplication1.Interface
         Task ImportBooksAsync(IEnumerable<Books> books);
         Task<IEnumerable<Books>> ExportBooksAsync();
 
+        Task<int> GetTotalBooksCountAsync();
+
     }
 }

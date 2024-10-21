@@ -15,197 +15,88 @@ namespace WebApplication1.Controllers
     public class BooksController : Controller
     {
         private readonly IBooksService _booksService;
-        //private readonly TestApiDb _context;
-
-        //public BooksController(TestApiDb context, IBooksService booksService)
-        //{
-        //    _context = context;
-        //    _booksService = booksService;
-        //}
 
         public BooksController(IBooksService booksService)
         {
             _booksService = booksService;
         }
 
-
-
-        // GET /api/books — получить список всех книг
-        [HttpGet("all")]
+        // GET: api/books
+        [HttpGet]
         public async Task<IActionResult> GetAllBooks()
         {
             var books = await _booksService.GetAllBooksAsync();
-            if (books is null)
-                return NotFound();
-
-            return Ok(new
-            {
-                books = books,
-                status = true
-            });
-        }
-        //[HttpGet("all")]
-        //public async Task<IActionResult> GetAllBooks()
-        //{
-        //    var books = await _context.Books.ToListAsync();
-        //    return Ok(new
-        //    {
-        //        books = books,
-        //        status = true
-        //    });
-        //}
-
-        // GET /api/books/{id} — получить книгу по её ID
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetBookById(int id)
-        {
-            //var book = await _context.Books.FindAsync(id);
-            var book = await _booksService.GetBookByIdAsync(id);
-            if (book == null)
-            {
-                return NotFound(new { message = "Book not found" });
-            }
-            return Ok(new
-            {
-                book = book,
-                status = true
-            });
-        }
-
-        // POST /api/books — добавить новую книгу
-        [HttpPost]
-        public async Task<IActionResult> AddBook([FromBody] Books newBook)
-        {
-            //_context.Books.Add(newBook);
-            //await _booksService.AddBookAsync(newBook);
-            //await _context.SaveChangesAsync();
-            //return Ok(new
-            //{
-            //    message = "Книга успешно добавлена",
-            //    status = true
-            //});
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new
-                {
-                    Message = "Invalid input data",
-                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(x => x.ErrorMessage)),
-                    Status = false
-                });
-            }
-
-            await _booksService.AddBookAsync(newBook);
-            return CreatedAtAction(nameof(GetBookById), new { id = newBook.Id_Books }, new { Book = newBook, Status = true });
-
-
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBook(int id, [FromBody] Books updatedBook)
-        {
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
-            {
-                return NotFound(new { message = "Book not found" });
-            }
-
-            book.Title = updatedBook.Title;
-            book.Author = updatedBook.Author;
-            book.Genre_ID = updatedBook.Genre_ID;
-            book.PublicationYear = updatedBook.PublicationYear;
-            book.Description = updatedBook.Description;
-            book.AvailableCopies = updatedBook.AvailableCopies;
-
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Book updated successfully",
-                status = true
-            });
-        }
-
-        // DELETE /api/books/{id} — удалить книгу
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteBook(int id)
-        {
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
-            {
-                return NotFound(new { message = "Book not found" });
-            }
-
-            _context.Books.Remove(book);
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Book deleted successfully",
-                status = true
-            });
-        }
-
-        // GET /api/books/genre/{genreId} — получить книги по жанру
-        [HttpGet("genre/{genreId}")]
-        public async Task<IActionResult> GetBooksByGenre(int genreId)
-        {
-            var books = await _context.Books.Where(b => b.Genre_ID.ToString() == genreId.ToString()).ToListAsync();
-            return Ok(new
-            {
-                books = books,
-                status = true
-            });
-        }
-
-        // GET /api/books/search?query={query} — поиск книги по автору и названию
-        [HttpGet("search")]
-        public async Task<IActionResult> SearchBooks(string query)
-        {
-            var books = await _context.Books
-                .Where(b => b.Title.Contains(query) || b.Author.Contains(query))
-                .ToListAsync();
-
-            return Ok(new
-            {
-                books = books,
-                status = true
-            });
-        }
-
-        [HttpGet("search1")]
-        public async Task<IActionResult> SearchBooks([FromQuery] string? author, [FromQuery] string? genre, [FromQuery] int? year)
-        {
-            var query = _context.Books.AsQueryable(); // Подготовка запросов для фильтрации
-
-            if (!string.IsNullOrEmpty(author))
-            {
-                query = query.Where(b => b.Author.Contains(author));
-            }
-
-
-            if (!string.IsNullOrEmpty(genre))
-            {
-                query = query.Where(b => b.Genre_ID.Contains(genre));
-            }
-
-            if (year.HasValue)
-            {
-                query = query.Where(b => b.Year.Value.Year == year.Value);
-            }
-
-            var books = await query.ToListAsync();
             return Ok(new { books, status = true });
         }
 
-        // GET /api/books/list — получить список книг с пагинацией
+        // GET: api/books/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBookById(int id)
+        {
+            var book = await _booksService.GetBookByIdAsync(id);
+            if (book == null)
+            {
+                return NotFound(new { message = "Book not found", status = false });
+            }
+            return Ok(new { book, status = true });
+        }
+
+        // POST: api/books
+        [HttpPost]
+        public async Task<IActionResult> AddBook([FromBody] Books newBook)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Invalid input data", status = false });
+            }
+
+            await _booksService.AddBookAsync(newBook);
+            return CreatedAtAction(nameof(GetBookById), new { id = newBook.Id_Books }, new { book = newBook, status = true });
+        }
+
+        // PUT: api/books/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateBook(int id, [FromBody] Books updatedBook)
+        {
+            if (id != updatedBook.Id_Books)
+            {
+                return BadRequest(new { message = "ID mismatch", status = false });
+            }
+
+            await _booksService.UpdateBookAsync(id, updatedBook);
+            return Ok(new { message = "Book updated successfully", status = true });
+        }
+
+        // DELETE: api/books/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBook(int id)
+        {
+            await _booksService.DeleteBookAsync(id);
+            return Ok(new { message = "Book deleted successfully", status = true });
+        }
+
+        // GET: api/books/genre/{genreId}
+        [HttpGet("genre/{genreId}")]
+        public async Task<IActionResult> GetBooksByGenre(int genreId)
+        {
+            var books = await _booksService.GetBooksByGenreAsync(genreId);
+            return Ok(new { books, status = true });
+        }
+
+        // GET: api/books/search
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchBooks([FromQuery] string author, [FromQuery] string genre, [FromQuery] int? year)
+        {
+            var books = await _booksService.SearchBooksAsync(author, genre, year);
+            return Ok(new { books, status = true });
+        }
+
+        // GET: api/books/list
         [HttpGet("list")]
         public async Task<IActionResult> GetBookList([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var totalBooks = await _context.Books.CountAsync();
-            var books = await _context.Books
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
+            var books = await _booksService.GetBooksPaginatedAsync(page, pageSize);
+            var totalBooks = await _booksService.GetTotalBooksCountAsync();
             return Ok(new
             {
                 books,
@@ -216,37 +107,50 @@ namespace WebApplication1.Controllers
             });
         }
 
+        // POST: api/books/import
         [HttpPost("import")]
         public async Task<IActionResult> ImportBooks(IFormFile file)
         {
             if (file == null || file.Length == 0)
-                return BadRequest("File is empty");
+                return BadRequest(new { message = "File is empty", status = false });
 
-            using (var reader = new StreamReader(file.OpenReadStream()))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            try
             {
-                var books = csv.GetRecords<Books>().ToList();
-                _context.Books.AddRange(books);
-                await _context.SaveChangesAsync();
+                using (var reader = new StreamReader(file.OpenReadStream()))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    var books = csv.GetRecords<Books>().ToList();
+                    await _booksService.ImportBooksAsync(books);
+                }
+                return Ok(new { message = "Books imported successfully", status = true });
             }
-
-            return Ok(new { message = "Books imported successfully", status = true });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"An error occurred during import: {ex.Message}", status = false });
+            }
         }
 
+        // GET: api/books/export
         [HttpGet("export")]
         public async Task<IActionResult> ExportBooks()
         {
-            var books = await _context.Books.ToListAsync();
-
-            var csvContent = new StringBuilder();
-            csvContent.AppendLine("Title,Author,Genre,Year,Description");
-
-            foreach (var book in books)
+            try
             {
-                csvContent.AppendLine($"{book.Title},{book.Author},{book.Genre_ID},{book.Year},{book.Description}");
-            }
+                var books = await _booksService.ExportBooksAsync();
 
-            return File(Encoding.UTF8.GetBytes(csvContent.ToString()), "text/csv", "books.csv");
+                using (var memoryStream = new MemoryStream())
+                using (var writer = new StreamWriter(memoryStream))
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csv.WriteRecords(books);
+                    writer.Flush();
+                    return File(memoryStream.ToArray(), "text/csv", "books.csv");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"An error occurred during export: {ex.Message}", status = false });
+            }
         }
 
 
