@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.DbContextApi;
+using WebApplication1.Interface;
 using WebApplication1.Model;
+using WebApplication1.Models;
 
 namespace WebApplication1.Controllers
 {
@@ -9,109 +11,94 @@ namespace WebApplication1.Controllers
     [Route("api/[controller]")]
     public class ReadersController : Controller
     {
-        private readonly TestApiDb _context;
+        private readonly IReadersService _readersService;
 
-        public ReadersController(TestApiDb context)
+        public ReadersController(IReadersService readersService)
         {
-            _context = context;
+            _readersService = readersService; ;
         }
 
-        // GET /api/readers — получить список всех читателей
         [HttpGet]
-        public async Task<IActionResult> GetAllReaders()
+        public async Task<ActionResult<IEnumerable<Readers>>> GetAllReaders()
         {
-            var readers = await _context.Readers.ToListAsync();
-            return Ok(new
-            {
-                readers = readers,
-                status = true
-            });
+            var readers = await _readersService.GetAllReadersAsync();
+            return Ok(readers);
         }
 
-        // GET /api/readers/{id} — получить читателя по его ID
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetReaderById(int id)
+        public async Task<ActionResult<Readers>> GetReader(int id)
         {
-            var reader = await _context.Readers.FindAsync(id);
+            var reader = await _readersService.GetReaderByIdAsync(id);
             if (reader == null)
             {
-                return NotFound(new { message = "Reader not found" });
+                return NotFound();
             }
-            return Ok(new
-            {
-                reader = reader,
-                status = true
-            });
+            return Ok(reader);
         }
 
-        // POST /api/readers — зарегистрировать нового читателя
         [HttpPost]
-        public async Task<IActionResult> AddReader([FromBody] Readers newReader)
+        public async Task<ActionResult<Readers>> CreateReader(Readers reader)
         {
-            _context.Readers.Add(newReader);
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Reader added successfully",
-                status = true
-            });
+            var createdReader = await _readersService.AddReaderAsync(reader);
+            return CreatedAtAction(nameof(GetReader), new { id = createdReader.Id_Reader }, createdReader);
         }
 
-        // PUT /api/readers/{id} — обновить данные читателя
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateReader(int id, [FromBody] Readers updatedReader)
+        public async Task<IActionResult> UpdateReader(int id, Readers reader)
         {
-            var reader = await _context.Readers.FindAsync(id);
-            if (reader == null)
+            var updatedReader = await _readersService.UpdateReaderAsync(id, reader);
+            if (updatedReader == null)
             {
-                return NotFound(new { message = "Reader not found" });
+                return NotFound();
             }
-
-            reader.FirstName = updatedReader.FirstName;
-            reader.LastName = updatedReader.LastName;
-            reader.DateOfBirth = updatedReader.DateOfBirth;
-            reader.ContactInfo = updatedReader.ContactInfo;
-
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Reader updated successfully",
-                status = true
-            });
+            return NoContent();
         }
 
-        // DELETE /api/readers/{id} — удалить читателя
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteReader(int id)
         {
-            var reader = await _context.Readers.FindAsync(id);
-            if (reader == null)
+            var result = await _readersService.DeleteReaderAsync(id);
+            if (!result)
             {
-                return NotFound(new { message = "Reader not found" });
+                return NotFound();
             }
+            return NoContent();
+        }
 
-            _context.Readers.Remove(reader);
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Reader deleted successfully",
-                status = true
-            });
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<Readers>>> SearchReaders([FromQuery] string searchTerm)
+        {
+            var readers = await _readersService.SearchReadersAsync(searchTerm);
+            return Ok(readers);
+        }
 
-            [HttpGet("filter")]
-                 async Task<IActionResult> FilterReaders([FromQuery] DateTime? registeredAfter)
-            {
-                var query = _context.Readers.AsQueryable();
+        [HttpGet("paginated")]
+        public async Task<ActionResult<IEnumerable<Readers>>> GetReadersPaginated([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var (readers, totalCount) = await _readersService.GetReadersPaginatedAsync(page, pageSize);
+            Response.Headers.Add("X-Total-Count", totalCount.ToString());
+            return Ok(readers);
+        }
 
-                if (registeredAfter.HasValue)
-                {
-                    query = query.Where(r => r.RegistrationDate >= registeredAfter.Value);
-                }
+        [HttpGet("count")]
+        public async Task<ActionResult<int>> GetTotalReadersCount()
+        {
+            var count = await _readersService.GetTotalReadersCountAsync();
+            return Ok(count);
+        }
 
-                var readers = await query.ToListAsync();
-                return Ok(new { readers, status = true });
-            }
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportReaders(IEnumerable<Readers> readers)
+        {
+            await _readersService.ImportReadersAsync(readers);
+            return Ok();
+        }
 
+        [HttpGet("export")]
+        public async Task<ActionResult<IEnumerable<Readers>>> ExportReaders()
+        {
+            var readers = await _readersService.ExportReadersAsync();
+            return Ok(readers);
         }
     }
 

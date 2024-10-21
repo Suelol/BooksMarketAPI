@@ -87,10 +87,10 @@ public class BooksService : IBooksService  // Реализуем интерфе�
             query = query.Where(b => b.Genre_ID.Contains(genre));
         }
 
-        if (year.HasValue)
-        {
-            query = query.Where(b => b.Year.HasValue && b.Year.Value.Year == year.Value);
-        }
+        //if (year.HasValue)
+        //{
+        //    query = query.Where(b => b.Year.HasValue && b.Year.Value.Year == year.Value);
+        //}
 
         return await query.Include(b => b.Genres).ToListAsync();
     }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.DbContextApi;
+using WebApplication1.Interface;
 using WebApplication1.Model;
 
 namespace WebApplication1.Controllers
@@ -9,90 +10,95 @@ namespace WebApplication1.Controllers
     [Route("api/[controller]")]
     public class History_Book_RentalControllers : Controller
     {
-        private readonly TestApiDb _context;
+        private readonly IHistoryBookRentalService _historyService;
 
-        public History_Book_RentalControllers(TestApiDb context)
+        public History_Book_RentalControllers(IHistoryBookRentalService historyService)
         {
-            _context = context;
+            _historyService = historyService;
         }
 
-        // POST /api/rentals — арендовать книгу (читатель, книга, срок аренды)
-        [HttpPost]
-        public async Task<IActionResult> RentBook([FromBody] History_Book_Rental newRental)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<History_Book_Rental>>> GetAllHistory()
         {
-            _context.History_Book_Rentals.Add(newRental);
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Book rented successfully",
-                status = true
-            });
+            var history = await _historyService.GetAllHistoryAsync();
+            return Ok(history);
         }
 
-        // PUT /api/rentals/return — возврат книги
-        [HttpPut("return/{id}")]
-        public async Task<IActionResult> ReturnBook(int id)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<History_Book_Rental>> GetHistory(int id)
         {
-            var rental = await _context.History_Book_Rentals.FindAsync(id);
-            if (rental == null)
+            var history = await _historyService.GetHistoryByIdAsync(id);
+            if (history == null)
             {
-                return NotFound(new { message = "Rental record not found" });
+                return NotFound();
             }
-
-            rental.ReturnDate = DateTime.Now;
-            await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                message = "Book returned successfully",
-                status = true
-            });
+            return Ok(history);
         }
 
-        // GET /api/rentals/history/reader/{readerId} — получить историю аренды для читателя
-        [HttpGet("history/reader/{readerId}")]
-        public async Task<IActionResult> GetRentalHistoryForReader(int readerId)
+        [HttpPost]
+        public async Task<ActionResult<History_Book_Rental>> CreateHistory(History_Book_Rental history)
         {
-            var rentals = await _context.History_Book_Rentals
-                .Where(r => r.Reader_ID == readerId)
-                .ToListAsync();
-
-            return Ok(new
-            {
-                rentals = rentals,
-                status = true
-            });
+            var createdHistory = await _historyService.AddHistoryAsync(history);
+            return CreatedAtAction(nameof(GetHistory), new { id = createdHistory.Id }, createdHistory);
         }
 
-        // GET /api/rentals/history/book/{bookId} — получить историю аренды для книги
-        [HttpGet("history/book/{bookId}")]
-        public async Task<IActionResult> GetRentalHistoryForBook(int bookId)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateHistory(int id, History_Book_Rental history)
         {
-            var rentals = await _context.History_Book_Rentals
-                .Where(r => r.Books_Id == bookId)
-                .ToListAsync();
-
-            return Ok(new
+            var updatedHistory = await _historyService.UpdateHistoryAsync(id, history);
+            if (updatedHistory == null)
             {
-                rentals = rentals,
-                status = true
-            });
+                return NotFound();
+            }
+            return NoContent();
         }
 
-        // GET /api/rentals/current — получить список текущих аренд
-        [HttpGet("current")]
-        public async Task<IActionResult> GetCurrentRentals()
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteHistory(int id)
         {
-            var rentals = await _context.History_Book_Rentals
-                .Where(r => r.ReturnDate == null)
-                .ToListAsync();
-
-            return Ok(new
+            var result = await _historyService.DeleteHistoryAsync(id);
+            if (!result)
             {
-                rentals = rentals,
-                status = true
-            });
+                return NotFound();
+            }
+            return NoContent();
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<History_Book_Rental>>> SearchHistory([FromQuery] string searchTerm)
+        {
+            var history = await _historyService.SearchHistoryAsync(searchTerm);
+            return Ok(history);
+        }
+
+        [HttpGet("paginated")]
+        public async Task<ActionResult<IEnumerable<History_Book_Rental>>> GetHistoryPaginated([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var (histories, totalCount) = await _historyService.GetHistoryPaginatedAsync(page, pageSize);
+            Response.Headers.Add("X-Total-Count", totalCount.ToString());
+            return Ok(histories);
+        }
+
+        [HttpGet("count")]
+        public async Task<ActionResult<int>> GetTotalHistoryCount()
+        {
+            var count = await _historyService.GetTotalHistoryCountAsync();
+            return Ok(count);
+        }
+
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportHistory(IEnumerable<History_Book_Rental> histories)
+        {
+            await _historyService.ImportHistoryAsync(histories);
+            return Ok();
+        }
+
+        [HttpGet("export")]
+        public async Task<ActionResult<IEnumerable<History_Book_Rental>>> ExportHistory()
+        {
+            var histories = await _historyService.ExportHistoryAsync();
+            return Ok(histories);
         }
     }
-
 
 }

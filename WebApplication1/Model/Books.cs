@@ -18,6 +18,6 @@ namespace WebApplication1.Model
         public int PublicationYear {  get; set; }
         public int AvailableCopies { get; set;}
         public DateTime DateAdded { get; set; }
-        public DateTime? Year { get; set; }
+        public DateTime Year { get; set; }
     }
 }

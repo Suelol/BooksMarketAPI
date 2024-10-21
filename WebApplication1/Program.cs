@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.DbContextApi;
 using WebApplication1.Interface;
+using WebApplication1.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 
 builder.Services.AddScoped<IBooksService, BooksService>();
+builder.Services.AddScoped<IGenresService, GenresService>();
+builder.Services.AddScoped<IHistoryBookRentalService, HistoryBookRentalService>();
+builder.Services.AddScoped<IReadersService, ReadersService>();
 // Добавляем сервисы в контейнер.
 builder.Services.AddControllers();
 // Настраиваем Swagger/OpenAPI для документации
